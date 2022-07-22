@@ -1,4 +1,4 @@
-from pywrstat.client import Client as Pywrstat
+from pywrstat.client import Pywrstat
 from pywrstat.dto import (
     DaemonConfiguration,
     LowBatteryAction,
@@ -9,14 +9,9 @@ from pywrstat.dto import (
     UPSProperties,
     UPSStatus,
 )
-from pywrstat.errors import (
-    CommandFailed,
-    Error,
-    SetupFailed,
-    Timeout,
-    UnexpectedResponse,
-    Unreachable,
-)
+from pywrstat.errors import CommandFailed, Error, SetupFailed, Timeout, Unreachable
+
+__version__ = "0.0.1"
 
 __all__ = [
     "Pywrstat",
@@ -32,6 +27,5 @@ __all__ = [
     "Error",
     "SetupFailed",
     "Timeout",
-    "UnexpectedResponse",
     "Unreachable",
 ]
