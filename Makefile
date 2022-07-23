@@ -5,3 +5,6 @@ pip-compile-dev:
 	pip-compile requirements-dev.in > requirements-dev.txt
 
 pip-compile-all: pip-compile pip-compile-dev
+
+lint:
+	isort . && black .

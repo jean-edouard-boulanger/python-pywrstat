@@ -9,7 +9,14 @@ from pywrstat.dto import (
     UPSProperties,
     UPSStatus,
 )
-from pywrstat.errors import CommandFailed, Error, SetupFailed, Timeout, Unreachable
+from pywrstat.errors import (
+    CommandFailed,
+    Error,
+    NotReady,
+    SetupFailed,
+    Timeout,
+    Unreachable,
+)
 
 __version__ = "0.0.1"
 
@@ -28,4 +35,5 @@ __all__ = [
     "SetupFailed",
     "Timeout",
     "Unreachable",
+    "NotReady",
 ]
