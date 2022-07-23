@@ -17,8 +17,7 @@ from pywrstat.errors import (
     Timeout,
     Unreachable,
 )
-
-__version__ = "0.0.1"
+from pywrstat.version import __version__
 
 __all__ = [
     "Pywrstat",
