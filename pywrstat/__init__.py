@@ -17,7 +17,7 @@ from pywrstat.errors import (
     Timeout,
     Unreachable,
 )
-from pywrstat.version import __version__
+from pywrstat.version import __version__  # noqa
 
 __all__ = [
     "Pywrstat",
