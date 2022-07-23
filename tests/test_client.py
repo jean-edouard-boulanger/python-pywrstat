@@ -1,12 +1,14 @@
 from datetime import datetime, timedelta
 from pathlib import Path
 from textwrap import dedent
+from unittest.mock import call, patch
 
 import pytest
 
 from pywrstat import (
     DaemonConfiguration,
     LowBatteryAction,
+    NotReady,
     PowerEvent,
     PowerFailureAction,
     Pywrstat,
@@ -414,18 +416,49 @@ def test_get_ups_properties(pywrstat_client: Pywrstat, reader_mock: FakeReader):
     reader_mock.assert_no_more_calls()
 
 
-def test_test_ups_with_poll(pywrstat_client: Pywrstat, reader_mock: FakeReader):
+@pytest.mark.parametrize(
+    "previous_test_result, final_test_result",
+    [
+        ("None", "Failed at 2022/07/21 16:16:42"),
+        ("Failed at 2022/06/21 11:23:42", "Passed at 2022/07/21 16:16:42"),
+        ("Failed at 2022/06/21 11:23:42", "Failed at 2022/07/21 16:16:42"),
+        ("Passed at 2022/06/21 11:23:42", "Passed at 2022/07/21 16:16:42"),
+    ],
+)
+@patch("time.sleep")
+def test_test_ups_with_poll(
+    sleep_mock,
+    pywrstat_client: Pywrstat,
+    reader_mock: FakeReader,
+    previous_test_result: str,
+    final_test_result: str,
+):
+    reader_mock.expect_status_call(ups_test_result=previous_test_result)
     reader_mock.expect_test_call()
+    reader_mock.expect_status_call(ups_test_result=previous_test_result)
     reader_mock.expect_status_call(ups_test_result="In progress")
     reader_mock.expect_status_call(ups_test_result="In progress")
     reader_mock.expect_status_call(ups_test_result="In progress")
-    reader_mock.expect_status_call(ups_test_result="Passed at 2022/07/21 16:16:42")
-    pywrstat_client.test_ups(poll_result=True, poll_every=timedelta(seconds=0))
+    reader_mock.expect_status_call(ups_test_result=final_test_result)
+    final_result = pywrstat_client.test_ups(
+        poll_result=True, poll_every=timedelta(seconds=5)
+    )
+    assert final_result == _parse_test_result(final_test_result)
+    reader_mock.assert_no_more_calls()
+    sleep_mock.assert_has_calls([call(5.0), call(5.0), call(5.0), call(5.0)])
+
+
+def test_test_ups_raises_if_test_already_in_progress(
+    pywrstat_client: Pywrstat, reader_mock: FakeReader
+):
+    reader_mock.expect_status_call(ups_test_result="In progress")
+    with pytest.raises(NotReady):
+        pywrstat_client.test_ups()
     reader_mock.assert_no_more_calls()
 
 
 def test_reset_daemon_configuration(pywrstat_client: Pywrstat, reader_mock: FakeReader):
-    reader_mock.expect_call(args=["-reset"])
+    reader_mock.expect_call(["-reset"], "")
     pywrstat_client.reset_daemon_configuration()
     reader_mock.assert_no_more_calls()
 
@@ -461,7 +494,7 @@ def test_get_alarm_enabled(
 
 
 @pytest.mark.parametrize("alarm_enabled", [True, False])
-def test_set_hibernation_enabled(
+def test_set_alarm_enabled(
     pywrstat_client: Pywrstat, reader_mock: FakeReader, alarm_enabled: bool
 ):
     reader_mock.expect_call(

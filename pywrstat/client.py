@@ -17,7 +17,7 @@ from pywrstat.dto import (
     UPSProperties,
     UPSStatus,
 )
-from pywrstat.errors import CommandFailed, SetupFailed, Timeout, Unreachable
+from pywrstat.errors import CommandFailed, NotReady, SetupFailed, Timeout, Unreachable
 from pywrstat.reader import Reader, ReaderBase
 
 _PywrstatSectionType = str
@@ -139,10 +139,6 @@ def _parse_on_off(raw_value: str) -> bool:
 
 def _on_off(value: bool) -> str:
     return "on" if value else "off"
-
-
-def _is_ups_reachable(raw_ups_status: PropertyBag) -> bool:
-    return raw_ups_status["State"] != "Lost Communication"
 
 
 class Pywrstat(object):
@@ -287,27 +283,37 @@ class Pywrstat(object):
                             return the last known test result after starting the tests.
         :param timeout: Give up polling after the specified duration. No timeout by default.
         :param poll_every: Time between two test results polls (defaults to 1 second).
-        :return: Last seen test result
+        :return: Final test result or `None` if polling is disabled.
         :raises: Unreachable: If the UPS is not reachable.
         :raises: CommandFailed: If the tests could not be started.
+        :raises: NotReady: If a test is already in progress.
         :raises: Timeout: If the tests did not complete after the specified timeout.
         """
+        previous_test_result = self.get_ups_status().test_result
+        if (
+            previous_test_result
+            and previous_test_result.status == TestStatus.InProgress
+        ):
+            raise NotReady("A test is already in progress")
         data = self._reader.read(["-test"])
         if "The UPS test is initiated" not in data:
             raise CommandFailed(data)
         if not poll_result:
-            return self.get_ups_status().test_result
-        timout_seconds = timeout.total_seconds() if timeout else None
+            return None
         cutoff = datetime.now() + timeout if timeout else None
         poll_every = timedelta(seconds=1) if poll_every is None else poll_every
+        start_time = datetime.now()
         while True:
             last_result = self.get_ups_status().test_result
-            if last_result and last_result.status != TestStatus.InProgress:
+            if last_result == previous_test_result:
+                pass
+            elif last_result and last_result.status != TestStatus.InProgress:
                 return last_result
             if cutoff and datetime.now() > cutoff:
-                assert timeout
+                now = datetime.now()
+                elapsed_seconds = (now - start_time).total_seconds()
                 raise Timeout(
-                    f"Timed out waiting for tests results after {timout_seconds}s."
+                    f"Timed out waiting for tests results after {elapsed_seconds}s."
                     f" Last status was '{last_result.status.value if last_result else 'unknown'}'."
                 )
             time.sleep(poll_every.total_seconds())
@@ -468,10 +474,6 @@ class Pywrstat(object):
         """
         output = self._reader.read(["-verify"])
         return "Verify failed" not in output
-
-    def _check_reachable(self):
-        if not self.is_reachable():
-            raise Unreachable("UPS is not reachable")
 
     @classmethod
     def _check_setup(cls, output: str):

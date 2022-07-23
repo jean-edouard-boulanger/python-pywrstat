@@ -6,7 +6,11 @@ class MissingBinary(Exception):
     pass
 
 
-class Unreachable(Error):
+class NotReady(Error):
+    pass
+
+
+class Unreachable(NotReady):
     pass
 
 

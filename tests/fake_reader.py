@@ -9,8 +9,12 @@ from pywrstat.reader import ReaderBase
 @dataclass
 class FakeCall:
     args: List[str]
-    output: str
+    output: Optional[str]
     raises: Optional[Exception]
+
+    def __post_init__(self):
+        if self.output is None and self.raises is None:
+            raise ValueError("output or raises must be set")
 
 
 class FakeReader(ReaderBase):
@@ -22,17 +26,19 @@ class FakeReader(ReaderBase):
         assert len(self._expected_calls) == 0
 
     def read(self, args: List[str]) -> str:
-        assert (
-            len(self._expected_calls) > 0
-        ), "FakeReader did not expect to be called any more"
+        assert len(self._expected_calls) > 0, (
+            f"FakeReader did not expect to be called any more, was called with"
+            f" `{args}` instead (call number {len(self._previous_calls) + 1})"
+        )
         call = self._expected_calls.pop(0)
         assert call.args == args, (
             f"FakeReader expected to be called with `{call.args}`, was called with"
-            f" `{args}` instead (during call number {len(self._previous_calls) + 1})"
+            f" `{args}` instead (call number {len(self._previous_calls) + 1})"
         )
         self._previous_calls.append(call)
         if call.raises:
             raise call.raises
+        assert call.output is not None
         return call.output
 
     def expect_status_call_unreachable(
