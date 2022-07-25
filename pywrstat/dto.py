@@ -2,7 +2,7 @@ import enum
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional, Union
 
 
 @dataclass
@@ -73,3 +73,25 @@ class DaemonConfiguration:
     cloud_enabled: bool
     power_failure_action: PowerFailureAction
     low_battery_action: LowBatteryAction
+
+
+@dataclass
+class ValueChanged:
+    field_name: str
+    new_value: Any
+    previous_value: Any
+
+
+@dataclass
+class ReachabilityChanged:
+    reachable: bool
+
+
+EventMetadataType = Union[ValueChanged, ReachabilityChanged]
+
+
+@dataclass
+class Event:
+    event_metadata: EventMetadataType
+    new_state: Optional[UPSStatus]
+    previous_state: Optional[UPSStatus]

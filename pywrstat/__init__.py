@@ -1,13 +1,16 @@
 from pywrstat.client import Pywrstat
 from pywrstat.dto import (
     DaemonConfiguration,
+    Event,
     LowBatteryAction,
     PowerEvent,
     PowerFailureAction,
+    ReachabilityChanged,
     TestResult,
     TestStatus,
     UPSProperties,
     UPSStatus,
+    ValueChanged,
 )
 from pywrstat.errors import (
     CommandFailed,

@@ -1,21 +1,25 @@
+import dataclasses
 import re
 import time
 from collections import defaultdict
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Dict, Optional, Union
+from typing import Dict, Generator, Optional, Union
 
 from dateutil.parser import parse as parse_time
 
 from pywrstat.dto import (
     DaemonConfiguration,
+    Event,
     LowBatteryAction,
     PowerEvent,
     PowerFailureAction,
+    ReachabilityChanged,
     TestResult,
     TestStatus,
     UPSProperties,
     UPSStatus,
+    ValueChanged,
 )
 from pywrstat.errors import CommandFailed, NotReady, SetupFailed, Timeout, Unreachable
 from pywrstat.reader import Reader, ReaderBase
@@ -246,6 +250,61 @@ class Pywrstat(object):
             test_result=_parse_test_result(data["Test Result"]),
             last_power_event=_parse_power_event(data["Last Power Event"]),
         )
+
+    def monitor_ups_status(
+        self, poll_every: Optional[timedelta] = None
+    ) -> Generator[Event, None, None]:
+        """Monitor the UPS status, sends events whenever the status changes.
+
+        Possible events are:
+
+          - ReachabilityChanged: when the UPS becomes unreachable / reachable again).
+          - ValueChanged: when one / more UPS status property changes.
+
+        Each event contains the new and previous states.
+
+        :param poll_every: Interval between ``get_ups_status`` status calls
+        """
+        poll_every = poll_every or timedelta(seconds=1)
+        previous_state: Optional[UPSStatus] = None
+        previously_reachable: Optional[bool] = None
+        while True:
+            try:
+                current_state = self.get_ups_status()
+                if previously_reachable is False:
+                    yield Event(
+                        event_metadata=ReachabilityChanged(reachable=True),
+                        new_state=current_state,
+                        previous_state=previous_state,
+                    )
+                if previous_state:
+                    previous_state_serialized = dataclasses.asdict(previous_state)
+                    current_state_serialized = dataclasses.asdict(current_state)
+                    for field in sorted(previous_state_serialized.keys()):
+                        previous_value = previous_state_serialized[field]
+                        current_value = current_state_serialized[field]
+                        if current_value != previous_value:
+                            yield Event(
+                                event_metadata=ValueChanged(
+                                    field_name=field,
+                                    new_value=current_value,
+                                    previous_value=previous_value,
+                                ),
+                                new_state=current_state,
+                                previous_state=previous_state,
+                            )
+                previous_state = current_state
+                previously_reachable = True
+            except Unreachable:
+                if previously_reachable is True:
+                    yield Event(
+                        event_metadata=ReachabilityChanged(reachable=False),
+                        new_state=None,
+                        previous_state=previous_state,
+                    )
+                previous_state = None
+                previously_reachable = False
+            time.sleep(poll_every.total_seconds())
 
     def get_raw_ups_properties(self, check_reachable: bool = False) -> PropertyBag:
         """Get the raw UPS status limited to the "Properties" section (as returned by `pwrstat -status`).
