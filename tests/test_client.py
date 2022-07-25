@@ -623,5 +623,5 @@ def test_configure_cloud(pywrstat_client: Pywrstat, reader_mock: FakeReader):
         ["-cloud", "-active", "on", "-account", "dummy", "-password", "123456"],
         "Setup configuration successful.",
     )
-    pywrstat_client.configure_cloud(enabled=True, account="dummy", password="123456"),
+    pywrstat_client.configure_cloud(enabled=True, account="dummy", password="123456")
     reader_mock.assert_no_more_calls()
