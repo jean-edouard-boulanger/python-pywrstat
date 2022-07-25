@@ -151,6 +151,7 @@ class Pywrstat(object):
 
     def is_reachable(self) -> bool:
         """Check whether the UPS is reachable.
+
         :return: True if the UPS is reachable, False otherwise.
         """
         return _is_ups_reachable(
@@ -158,8 +159,10 @@ class Pywrstat(object):
         )
 
     def get_pwrstat_version(self) -> Optional[str]:
-        """Get the pwrstat binary version (as returned by `pwrstat -version`).
-        :return: pwrstat binary version (as returned by `pwrstat -version`).
+        """Get the pwrstat binary version (as returned by ``pwrstat -version``).
+
+        :return: pwrstat binary version (as returned by ``pwrstat -version``), returned as a
+            ``f"{major}.{minor}.{patch}"`` format (example: ``"1.4.1"``).
         """
         for line in self._reader.read(["-version"]).splitlines(keepends=False):
             match = re.search(r"^pwrstat version (\d+\.\d+\.\d+)$", line.strip())
@@ -168,17 +171,45 @@ class Pywrstat(object):
         return None
 
     def get_raw_daemon_configuration(self) -> Dict[str, PropertyBag]:
-        """Get the raw pwrstatd (pwrstat daemon) configuration (as returned by `pwrstat -config`).
-        :return: raw pwrstatd (pwrstat daemon) configuration (as returned by `pwrstat -config`). The output is
-                 a mapping of sections (example "Action for Power Failure") to their respective configurations (which
-                 is a mapping of properties to string values)
+        """Get the raw pwrstatd (pwrstat daemon) configuration (as returned by ``pwrstat -config``).
+
+        .. code-block:: json
+           :caption: Example output
+
+            {
+                "Daemon Configuration": {
+                    "Alarm": "On",
+                    "Hibernate": "Off",
+                    "Cloud": "Off"
+                },
+                "Action for Power Failure": {
+                    "Delay time since Power failure": "600 sec.",
+                    "Run script command": "On",
+                    "Path of script command": "/etc/pwrstatd-powerfail.sh",
+                    "Duration of command running": "0 sec.",
+                    "Enable shutdown system": "On"
+                },
+                "Action for Battery Low": {
+                    "Remaining runtime threshold": "600 sec.",
+                    "Battery capacity threshold": "35 %.",
+                    "Run script command": "On",
+                    "Path of command": "/etc/pwrstatd-lowbatt.sh",
+                    "Duration of command running": "0 sec.",
+                    "Enable shutdown system": "On"
+                }
+            }
+
+        :return: Raw pwrstatd (pwrstat daemon) configuration (as returned by ``pwrstat -config``). The output
+            is a mapping of sections (example *"Action for Power Failure"*) to their respective configurations (which
+            is a mapping of properties to string values)
         """
         return _parse_pwrstat_output(self._reader.read(["-config"]))
 
     def get_daemon_configuration(self) -> DaemonConfiguration:
-        """Get the pwrstatd (pwrstat daemon) configuration (as returned by `pwrstat -config`).
-        :return: pwrstatd (pwrstat daemon) configuration (as returned by `pwrstat -config`). The output is deserialized
-                 to a `DaemonConfiguration` object.
+        """Get the pwrstatd (pwrstat daemon) configuration (as returned by ``pwrstat -config``).
+
+        :return: `pwrstatd` (pwrstat daemon) configuration (as returned by ``pwrstat -config``). The output is
+            deserialized to a :class:`DaemonConfiguration <pywrstat.dto.DaemonConfiguration>` object.
         """
         data = self.get_raw_daemon_configuration()
         return DaemonConfiguration(
@@ -194,26 +225,57 @@ class Pywrstat(object):
         )
 
     def get_power_failure_action(self) -> PowerFailureAction:
-        """Get the power failure action configuration (i.e. "Action for Power Failure") from the daemon configuration.
-        :return: power failure action configuration (i.e. "Action for Power Failure") from the daemon configuration.
-                 The output is deserialized to a `PowerFailureAction` object.
+        """Get the power failure action configuration (i.e. ``"Action for Power Failure"``) from the daemon
+        configuration.
+
+        :return: Power failure action configuration (i.e. ``"Action for Power Failure"``) from the daemon configuration.
+            The output is deserialized to a :class:`DaemonConfiguration <pywrstat.dto.PowerFailureAction>` object.
         """
         return self.get_daemon_configuration().power_failure_action
 
     def get_low_battery_action(self) -> LowBatteryAction:
-        """Get the low battery action configuration (i.e. "Action for Battery Low") from the daemon configuration.
-        :return: low battery action configuration (i.e. "Action for Battery Low") from the daemon configuration. The
-                 output is deserialized to a `LowBatteryAction` object.
+        """Get the low battery action configuration (i.e. ``"Action for Battery Low"``) from the daemon configuration.
+
+        :return: Low battery action configuration (i.e. ``"Action for Battery Low"``) from the daemon configuration.
+            The output is deserialized to a :class:`DaemonConfiguration <pywrstat.dto.LowBatteryAction>` object.
         """
         return self.get_daemon_configuration().low_battery_action
 
     def get_raw_complete_ups_status(
         self, check_reachable: bool = False
     ) -> Dict[str, PropertyBag]:
-        """Get the complete raw UPS status (as returned by `pwrstat -status`).
-        :return: raw UPS status (as returned by `pwrstat -status`). The output is a mapping of sections
-                 (example "Current UPS status") to their respective configurations (which is a mapping of
-                 properties to string values)
+        """Get the complete raw UPS status (as returned by ``pwrstat -status``).
+
+        .. code-block:: json
+           :caption: Example output
+
+            {
+                "Properties": {
+                    "Model Name": "CP1500EPFCLCD",
+                    "Firmware Number": "CR01XXXXXXX",
+                    "Rating Voltage": "230 V",
+                    "Rating Power": "900 Watt"
+                },
+                "Current UPS status": {
+                    "State": "Normal",
+                    "Power Supply by": "Utility Power",
+                    "Utility Voltage": "238 V",
+                    "Output Voltage": "238 V",
+                    "Battery Capacity": "100 %",
+                    "Remaining Runtime": "156 min.",
+                    "Load": "27 Watt(3 %)",
+                    "Line Interaction": "None",
+                    "Test Result": "Passed at 2022/07/22 22:03:55",
+                    "Last Power Event": "Blackout at 2022/07/23 16:05:36 for 8 min."
+                }
+            }
+
+        :param check_reachable: If set to True, asserts that the UPS is reachable before returning the raw data
+            (False by default).
+        :return: Raw UPS status (as returned by ``pwrstat -status``). The output is a mapping of sections
+            (example *"Current UPS status"*) to their respective settings (which is a mapping of
+            properties to string values)
+        :raises Unreachable: If the UPS is not reachable (only if ``check_reachable`` was explicitly set to ``True``)
         """
         data = _parse_pwrstat_output(self._reader.read(["-status"]))
         if check_reachable and not _is_ups_reachable(data["Current UPS status"]):
@@ -221,18 +283,36 @@ class Pywrstat(object):
         return data
 
     def get_raw_ups_status(self, check_reachable: bool = False) -> PropertyBag:
-        """Get the raw UPS status limited to the "Current UPS status" section (as returned by `pwrstat -status`).
-        :return: raw UPS status limited to the "Current UPS status" section (as returned by `pwrstat -status`). The
-                 output is a mapping of properties to string values.
-        :raises: Unreachable: If the UPS is not reachable.
+        """Get the raw UPS status limited to the ``"Current UPS status"`` section (as returned by ``pwrstat -status``).
+
+        .. code-block:: json
+           :caption: Example output
+
+            {
+                "State": "Normal",
+                "Power Supply by": "Utility Power",
+                "Utility Voltage": "238 V",
+                "Output Voltage": "238 V",
+                "Battery Capacity": "100 %",
+                "Remaining Runtime": "160 min.",
+                "Load": "18 Watt(2 %)",
+                "Line Interaction": "None",
+                "Test Result": "Passed at 2022/07/22 22:03:55",
+                "Last Power Event": "Blackout at 2022/07/23 16:05:36 for 8 min."
+            }
+
+        :return: Raw UPS status limited to the ``"Current UPS status"`` section (as returned by ``pwrstat -status``).
+            The output is a mapping of ``string``  properties to ``string`` values.
+        :raises Unreachable: If the UPS is not reachable (only if ``check_reachable`` was explicitly set to ``True``)
         """
         return self.get_raw_complete_ups_status(check_reachable)["Current UPS status"]
 
     def get_ups_status(self) -> UPSStatus:
-        """Get the UPS status limited to the "Current UPS status" section.
-        :return: The UPS status limited to the "Current UPS status" section. The output is deserialized to a
-                 `UPSStatus` object.
-        :raises: Unreachable: If the UPS is not reachable.
+        """Get the UPS status limited to the ``"Current UPS status"`` section.
+
+        :return: The UPS status limited to the ``"Current UPS status"`` section. The output is deserialized to a
+            :class:`DaemonConfiguration <pywrstat.dto.UPSStatus>` object.
+        :raises Unreachable: If the UPS is not reachable.
         """
         data = self.get_raw_ups_status(check_reachable=True)
         return UPSStatus(
@@ -307,20 +387,32 @@ class Pywrstat(object):
             time.sleep(poll_every.total_seconds())
 
     def get_raw_ups_properties(self, check_reachable: bool = False) -> PropertyBag:
-        """Get the raw UPS status limited to the "Properties" section (as returned by `pwrstat -status`).
-        :return: raw UPS status limited to the "Properties" section (as returned by `pwrstat -status`). The
-                 output is a mapping of properties to string values.
-        :raises: Unreachable: If the UPS is not reachable.
+        """Get the raw UPS status limited to the ``"Properties"`` section (as returned by ``pwrstat -status``).
+
+        .. code-block:: json
+           :caption: Example output
+
+            {
+                "Model Name": "CP1500EPFCLCD",
+                "Firmware Number": "CR01XXXXXXX",
+                "Rating Voltage": "230 V",
+                "Rating Power": "900 Watt"
+            }
+
+        :return: raw UPS status limited to the ``"Properties"`` section (as returned by ``pwrstat -status``). The
+            output is a mapping of ``string``  properties to ``string`` values.
+        :raises Unreachable: If the UPS is not reachable.
         """
         return self.get_raw_complete_ups_status(check_reachable=check_reachable)[
             "Properties"
         ]
 
     def get_ups_properties(self) -> UPSProperties:
-        """Get the UPS status limited to the "Properties" section.
-        :return: The UPS status limited to the "Properties" section. The output is deserialized to a
-                 `UPSProperties` object.
-        :raises: Unreachable: If the UPS is not reachable.
+        """Get the UPS status limited to the ``"Properties"`` section.
+
+        :return: The UPS status limited to the ``"Properties"`` section. The output is deserialized to a
+            :class:`UPSProperties <pywrstat.dto.UPSProperties>` object.
+        :raises Unreachable: If the UPS is not reachable.
         """
         data = self.get_raw_ups_properties(check_reachable=True)
         return UPSProperties(
@@ -336,17 +428,18 @@ class Pywrstat(object):
         timeout: Optional[timedelta] = None,
         poll_every: Optional[timedelta] = None,
     ) -> Optional[TestResult]:
-        """Verify the UPS will work well in battery power (as run by `pwrstat -test`). The user of this function
-            can choose to wait for the test to complete or not (`True` by default).
+        """Verify the UPS will work well in battery power (as run by ``pwrstat -test``). The user of this function
+        can choose to wait for the test to complete or not (`True` by default).
+
         :param poll_result: Whether to wait for the tests results (`True` by default). If set to `False`, directly
-                            return the last known test result after starting the tests.
+            return the last known test result after starting the tests.
         :param timeout: Give up polling after the specified duration. No timeout by default.
         :param poll_every: Time between two test results polls (defaults to 1 second).
         :return: Final test result or `None` if polling is disabled.
-        :raises: Unreachable: If the UPS is not reachable.
-        :raises: CommandFailed: If the tests could not be started.
-        :raises: NotReady: If a test is already in progress.
-        :raises: Timeout: If the tests did not complete after the specified timeout.
+        :raises Unreachable: If the UPS is not reachable.
+        :raises CommandFailed: If the tests could not be started.
+        :raises NotReady: If a test is already in progress.
+        :raises Timeout: If the tests did not complete after the specified timeout.
         """
         previous_test_result = self.get_ups_status().test_result
         if (
@@ -378,22 +471,24 @@ class Pywrstat(object):
             time.sleep(poll_every.total_seconds())
 
     def reset_daemon_configuration(self) -> None:
-        """Reset all daemon configurations to default (as run by `pwrstat -reset`).
-        :return: Daemon configuration after reset.
-        :raises: CommandFailed: If the daemon configuration could not be reset.
+        """Reset all daemon configurations to default (as run by ``pwrstat -reset``).
+
+        :raises CommandFailed: If the daemon configuration could not be reset.
         """
         self._reader.read(["-reset"])
 
     @property
     def hibernation_enabled(self) -> bool:
-        """Check whether system hibernation (vs. system shutdown) is enabled.
-        :return: `True` if hibernation is enabled, `False` otherwise.
+        """Check whether system hibernation (*vs. system shutdown*) is enabled.
+
+        :return: ``True`` if hibernation is enabled, ``False`` otherwise.
         """
         return self.get_daemon_configuration().hibernate_enabled
 
     @hibernation_enabled.setter
-    def hibernation_enabled(self, enabled: bool):
-        """Set up the hibernation (vs. system shutdown) enablement (as run by `pwrstat -hibernate [on/off]`).
+    def hibernation_enabled(self, enabled: bool) -> None:
+        """Set up the hibernation (*vs. system shutdown*) enablement (as run by ``pwrstat -hibernate [on/off]``).
+
         :param enabled: Specify whether to enable or disable hibernation (vs. system shutdown).
         """
         self._check_setup(self._reader.read(["-hibernate", _on_off(enabled)]))
@@ -401,20 +496,23 @@ class Pywrstat(object):
     @property
     def alarm_enabled(self) -> bool:
         """Check whether the UPS alarm is enabled.
+
         :return: `True` if the UPS alarm is enabled, `False` otherwise.
         """
         return self.get_daemon_configuration().alarm_enabled
 
     @alarm_enabled.setter
-    def alarm_enabled(self, enabled: bool):
-        """Set the UPS alarm enablement (as run by `pwrstat -alarm [on/off]`).
+    def alarm_enabled(self, enabled: bool) -> None:
+        """Set the UPS alarm enablement (as run by ``pwrstat -alarm [on/off]``).
+
         :param enabled: Specify whether to enable or disable the UPS alarm.
         :raises: SetupFailed: If alarm enablement could not be setup.
         """
         self._check_setup(self._reader.read(["-alarm", _on_off(enabled)]))
 
-    def mute(self):
-        """Setup temporally mute alarm when alarm is on enable state (as run by `pwrstat -mute`).
+    def mute(self) -> None:
+        """Temporally mute the UPS alarm when the alarm is on enabled state (as run by ``pwrstat -mute``).
+
         :raises: Unreachable: If the UPS is not reachable.
         :raises: SetupFailed: If alarm enablement could not be muted.
         """
@@ -430,7 +528,7 @@ class Pywrstat(object):
         cmd: Optional[Union[str, Path]] = None,
         duration: Optional[timedelta] = None,
         shutdown: Optional[bool] = None,
-    ):
+    ) -> None:
         args = [action]
         if delay is not None:
             args += ["-delay", str(int(delay.total_seconds()))]
@@ -455,16 +553,18 @@ class Pywrstat(object):
         script_command_duration: Optional[timedelta] = None,
         script_command_path: Optional[Union[str, Path]] = None,
         system_shutdown_enabled: Optional[bool] = None,
-    ):
-        """Configure the daemon power failure action (as run by `pwrstat -pwrfail ...args`). Only specify the
-            arguments you wish to override.
-        :param script_command_enabled: (-active*1) Setup command-execution or not when event occurred.
-        :param delay_time_since_power_failure: (-delay*1) Setup delay seconds when event occurred.
-        :param script_command_duration: (-duration*1) Setup duration seconds of command-execution when event occurred.
-        :param script_command_path: (-cmd*1) Assign command file when event occurred.
-        :param system_shutdown_enabled: (-shutdown*1) Setup shutdown OS or not when event occurred.
+    ) -> None:
+        """Configure the daemon power failure action (as run by ``pwrstat -pwrfail ...args``). **Only specify the
+        arguments you wish to override.**
+
+        :param script_command_enabled: (``-active*1``) Setup command-execution or not when event occurred.
+        :param delay_time_since_power_failure: (``-delay*1``) Setup delay seconds when event occurred.
+        :param script_command_duration: (``-duration*1``) Setup duration seconds of command-execution when event
+            occurred.
+        :param script_command_path: (``-cmd*1``) Assign command file when event occurred.
+        :param system_shutdown_enabled: (``-shutdown*1``) Setup shutdown OS or not when event occurred.
         :return: Power failure action after re-configuration.
-        :raises: SetupFailed: If power failure action could not be re-configured.
+        :raises SetupFailed: If power failure action could not be re-configured.
         """
         self._configure_action(
             action="-pwrfail",
@@ -484,17 +584,19 @@ class Pywrstat(object):
         script_command_path: Optional[Union[str, Path]] = None,
         system_shutdown_enabled: Optional[bool] = None,
     ) -> None:
-        """Configure the daemon low battery action (as run by `pwrstat -lowbatt ...args`). Only specify the arguments
-            you wish to override.
-        :param script_command_enabled: (-active*1) Setup command-execution or not when event occurred.
-        :param remaining_runtime_threshold: (-runtime*1) Setup remaining runtime threshold to identify low battery
+        """Configure the daemon low battery action (as run by ``pwrstat -lowbatt ...args``). **Only specify the
+        arguments you wish to override.**
+
+        :param script_command_enabled: (``-active*1``) Setup command-execution or not when event occurred.
+        :param remaining_runtime_threshold: (``-runtime*1``) Setup remaining runtime threshold to identify low battery
             event.
-        :param battery_capacity_threshold_percent: (-capacity*1) Setup low battery capacity threshold to identify low
-            battery event. This value is expected to be a float between 0.0 (0%) and 1.0 (100%).
-        :param script_command_duration: (-duration*1) Setup duration seconds of command-execution when event occurred.
-        :param script_command_path: (-cmd*1) Assign command file when event occurred.
-        :param system_shutdown_enabled: (-shutdown*1) Setup shutdown OS or not when event occurred.
-        :raises: SetupFailed: If power failure action could not be re-configured.
+        :param battery_capacity_threshold_percent: (``-capacity*1``) Setup low battery capacity threshold to identify
+            low battery event. This value is expected to be a float between 0.0 (0%) and 1.0 (100%).
+        :param script_command_duration: (``-duration*1``) Setup duration seconds of command-execution when event
+            occurred.
+        :param script_command_path: (``-cmd*1``) Assign command file when event occurred.
+        :param system_shutdown_enabled: (``-shutdown*1``) Setup shutdown OS or not when event occurred.
+        :raises SetupFailed: If power failure action could not be re-configured.
         """
         self._configure_action(
             action="-lowbatt",
@@ -511,12 +613,14 @@ class Pywrstat(object):
         enabled: Optional[bool] = None,
         account: Optional[str] = None,
         password: Optional[str] = None,
-    ):
-        """Configure the settings for cloud solution (as run by `pwrstat -cloud ...args`).
-        :param enabled: (-active*2) Activate or deactivate cloud solution.
-        :param account: (-account*2) Cloud account.
-        :param password: (-password*2) Cloud password.
-        :raises: SetupFailed: If power failure action could not be re-configured.
+    ) -> None:
+        """Configure the settings for cloud solution (as run by ``pwrstat -cloud ...args``). **Only specify the
+        arguments you wish to override.**
+
+        :param enabled: (``-active*2``) Activate or deactivate cloud solution.
+        :param account: (``-account*2``) Cloud account.
+        :param password: (``-password*2``) Cloud password.
+        :raises SetupFailed: If power failure action could not be re-configured.
         """
         args = ["-cloud"]
         if enabled is not None:
@@ -529,7 +633,8 @@ class Pywrstat(object):
 
     def verify_cloud_configuration(self) -> bool:
         """Verify PowerPanel can log in to cloud server (as run by `pwrstat -verify`).
-        :return: `True` if the verification passed, `False` otherwise.
+
+        :return: ``True`` if the verification passed, ``False`` otherwise.
         """
         output = self._reader.read(["-verify"])
         return "Verify failed" not in output

@@ -5,27 +5,35 @@ from pathlib import Path
 from typing import Any, Optional, Union
 
 
-@dataclass
+@dataclass(frozen=True)
 class PowerEvent:
+    """Power event"""
+
     event_type: str
     event_time: datetime
     duration: timedelta
 
 
 class TestStatus(enum.Enum):
+    """Test status"""
+
     InProgress = "In Progress"
     Passed = "Passed"
     Failed = "Failed"
 
 
-@dataclass
+@dataclass(frozen=True)
 class TestResult:
+    """Test result"""
+
     status: TestStatus
     test_time: Optional[datetime]
 
 
-@dataclass
+@dataclass(frozen=True)
 class UPSStatus:
+    """UPS Status"""
+
     state: str
     power_supply_by: str
     utility_voltage_volts: float
@@ -39,16 +47,20 @@ class UPSStatus:
     last_power_event: Optional[PowerEvent]
 
 
-@dataclass
+@dataclass(frozen=True)
 class UPSProperties:
+    """UPS Properties"""
+
     model_name: str
     firmware_number: str
     rating_voltage_volts: float
     rating_power_watts: float
 
 
-@dataclass
+@dataclass(frozen=True)
 class PowerFailureAction:
+    """Power failure action"""
+
     delay_time_since_power_failure: timedelta
     script_command_enabled: bool
     script_command_path: Path
@@ -56,8 +68,10 @@ class PowerFailureAction:
     system_shutdown_enabled: bool
 
 
-@dataclass
+@dataclass(frozen=True)
 class LowBatteryAction:
+    """Low battery action"""
+
     remaining_runtime_threshold: timedelta
     battery_capacity_threshold_percent: float
     script_command_enabled: bool
@@ -66,8 +80,10 @@ class LowBatteryAction:
     system_shutdown_enabled: bool
 
 
-@dataclass
+@dataclass(frozen=True)
 class DaemonConfiguration:
+    """Daemon configuration"""
+
     alarm_enabled: bool
     hibernate_enabled: bool
     cloud_enabled: bool
@@ -77,6 +93,8 @@ class DaemonConfiguration:
 
 @dataclass
 class ValueChanged:
+    """Type of event metadata indicating a change in one of the UPS status fields"""
+
     field_name: str
     new_value: Any
     previous_value: Any
@@ -84,6 +102,8 @@ class ValueChanged:
 
 @dataclass
 class ReachabilityChanged:
+    """Type of event metadata indicating a change in the UPS reachability"""
+
     reachable: bool
 
 
@@ -92,6 +112,8 @@ EventMetadataType = Union[ValueChanged, ReachabilityChanged]
 
 @dataclass
 class Event:
+    """UPS event (change while monitoring the UPS status)"""
+
     event_metadata: EventMetadataType
     new_state: Optional[UPSStatus]
     previous_state: Optional[UPSStatus]

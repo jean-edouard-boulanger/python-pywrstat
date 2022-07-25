@@ -14,8 +14,9 @@ from pywrstat.dto import (
 )
 from pywrstat.errors import (
     CommandFailed,
-    Error,
+    MissingBinary,
     NotReady,
+    PywrstatError,
     SetupFailed,
     Timeout,
     Unreachable,
@@ -25,13 +26,14 @@ from pywrstat.version import __version__  # noqa
 __all__ = [
     "CommandFailed",
     "DaemonConfiguration",
-    "Error",
     "Event",
     "LowBatteryAction",
+    "MissingBinary",
     "NotReady",
     "PowerEvent",
     "PowerFailureAction",
     "Pywrstat",
+    "PywrstatError",
     "ReachabilityChanged",
     "SetupFailed",
     "TestResult",

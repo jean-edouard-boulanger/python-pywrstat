@@ -36,3 +36,13 @@ jobs:
         run: |
           git fetch origin master ${{ github.event.pull_request.base.sha }}
           bin/check-version-bump.sh ${{ github.event.pull_request.base.sha }}  
+
+  sphinx:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: ammaraskar/sphinx-action@master
+        with:
+          docs-folder: "docs/"
+          pre-build-command: "pip install -r requirements.txt && pip install furo==2022.4.7 enum-tools[sphinx] && python setup.py build install"
+          build-command: "sphinx-build -b html source/ build/"
