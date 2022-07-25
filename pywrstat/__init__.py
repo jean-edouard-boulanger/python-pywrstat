@@ -23,19 +23,22 @@ from pywrstat.errors import (
 from pywrstat.version import __version__  # noqa
 
 __all__ = [
-    "Pywrstat",
+    "CommandFailed",
     "DaemonConfiguration",
+    "Error",
+    "Event",
     "LowBatteryAction",
+    "NotReady",
     "PowerEvent",
     "PowerFailureAction",
+    "Pywrstat",
+    "ReachabilityChanged",
+    "SetupFailed",
     "TestResult",
     "TestStatus",
+    "Timeout",
     "UPSProperties",
     "UPSStatus",
-    "CommandFailed",
-    "Error",
-    "SetupFailed",
-    "Timeout",
     "Unreachable",
-    "NotReady",
+    "ValueChanged",
 ]
