@@ -1,13 +1,16 @@
 from pywrstat.client import Pywrstat
 from pywrstat.dto import (
     DaemonConfiguration,
+    Event,
     LowBatteryAction,
     PowerEvent,
     PowerFailureAction,
+    ReachabilityChanged,
     TestResult,
     TestStatus,
     UPSProperties,
     UPSStatus,
+    ValueChanged,
 )
 from pywrstat.errors import (
     CommandFailed,
@@ -20,19 +23,22 @@ from pywrstat.errors import (
 from pywrstat.version import __version__  # noqa
 
 __all__ = [
-    "Pywrstat",
+    "CommandFailed",
     "DaemonConfiguration",
+    "Error",
+    "Event",
     "LowBatteryAction",
+    "NotReady",
     "PowerEvent",
     "PowerFailureAction",
+    "Pywrstat",
+    "ReachabilityChanged",
+    "SetupFailed",
     "TestResult",
     "TestStatus",
+    "Timeout",
     "UPSProperties",
     "UPSStatus",
-    "CommandFailed",
-    "Error",
-    "SetupFailed",
-    "Timeout",
     "Unreachable",
-    "NotReady",
+    "ValueChanged",
 ]
