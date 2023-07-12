@@ -6,5 +6,5 @@ pip-compile-dev:
 
 pip-compile-all: pip-compile pip-compile-dev
 
-lint:
+format:
 	isort . && black .

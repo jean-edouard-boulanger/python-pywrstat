@@ -1,12 +1,17 @@
 import enum
-from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any, Optional, Union
+from typing import Any, Literal, Optional, Union
+
+from pydantic import BaseModel as _BaseModel
 
 
-@dataclass
-class PowerEvent:
+class BaseModel(_BaseModel):
+    class Config:
+        frozen = True
+
+
+class PowerEvent(BaseModel):
     event_type: str
     event_time: datetime
     duration: timedelta
@@ -18,14 +23,12 @@ class TestStatus(enum.Enum):
     Failed = "Failed"
 
 
-@dataclass
-class TestResult:
+class TestResult(BaseModel):
     status: TestStatus
     test_time: Optional[datetime]
 
 
-@dataclass
-class UPSStatus:
+class UPSStatus(BaseModel):
     state: str
     power_supply_by: str
     utility_voltage_volts: float
@@ -39,16 +42,14 @@ class UPSStatus:
     last_power_event: Optional[PowerEvent]
 
 
-@dataclass
-class UPSProperties:
-    model_name: str
+class UPSProperties(BaseModel):
+    ups_model_name: str
     firmware_number: str
     rating_voltage_volts: float
     rating_power_watts: float
 
 
-@dataclass
-class PowerFailureAction:
+class PowerFailureAction(BaseModel):
     delay_time_since_power_failure: timedelta
     script_command_enabled: bool
     script_command_path: Path
@@ -56,8 +57,7 @@ class PowerFailureAction:
     system_shutdown_enabled: bool
 
 
-@dataclass
-class LowBatteryAction:
+class LowBatteryAction(BaseModel):
     remaining_runtime_threshold: timedelta
     battery_capacity_threshold_percent: float
     script_command_enabled: bool
@@ -66,8 +66,7 @@ class LowBatteryAction:
     system_shutdown_enabled: bool
 
 
-@dataclass
-class DaemonConfiguration:
+class DaemonConfiguration(BaseModel):
     alarm_enabled: bool
     hibernate_enabled: bool
     cloud_enabled: bool
@@ -75,23 +74,22 @@ class DaemonConfiguration:
     low_battery_action: LowBatteryAction
 
 
-@dataclass
-class ValueChanged:
+class ValueChangedEvent(BaseModel):
+    event_type: Literal["value_changed"] = "value_changed"
     field_name: str
     new_value: Any
     previous_value: Any
 
 
-@dataclass
-class ReachabilityChanged:
+class ReachabilityChangedEvent(BaseModel):
+    event_type: Literal["reachability_changed"] = "reachability_changed"
     reachable: bool
 
 
-EventMetadataType = Union[ValueChanged, ReachabilityChanged]
+EventType = Union[ValueChangedEvent, ReachabilityChangedEvent]
 
 
-@dataclass
-class Event:
-    event_metadata: EventMetadataType
+class Events(BaseModel):
+    events: list[EventType]
     new_state: Optional[UPSStatus]
     previous_state: Optional[UPSStatus]

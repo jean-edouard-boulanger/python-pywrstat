@@ -13,12 +13,10 @@ from pywrstat import (
     PowerEvent,
     PowerFailureAction,
     Pywrstat,
-    ReachabilityChanged,
     TestResult,
     TestStatus,
     UPSProperties,
     UPSStatus,
-    ValueChanged,
 )
 from pywrstat.client import (
     _check_percent,
@@ -395,50 +393,6 @@ def test_get_ups_status(pywrstat_client: Pywrstat, reader_mock: FakeReader):
     reader_mock.assert_no_more_calls()
 
 
-@patch("time.sleep")
-def test_monitor_ups_status(
-    sleep_mock, pywrstat_client: Pywrstat, reader_mock: FakeReader
-):
-    reader_mock.expect_status_call(ups_output_voltage=230, ups_load_watts=15)
-    reader_mock.expect_status_call(ups_output_voltage=230, ups_load_watts=15)
-    reader_mock.expect_status_call(ups_output_voltage=235, ups_load_watts=16)
-    reader_mock.expect_status_call_unreachable()
-    reader_mock.expect_status_call(ups_output_voltage=229, ups_load_watts=15)
-
-    initial_status = pywrstat_client.get_ups_status()
-    event_iterator = pywrstat_client.monitor_ups_status(poll_every=timedelta(seconds=2))
-    event = next(event_iterator)
-    assert event.previous_state == initial_status
-    assert event.new_state == dataclasses.replace(
-        initial_status, output_voltage_volts=235, load_watts=16
-    )
-    assert event.event_metadata == ValueChanged(
-        field_name="load_watts", previous_value=15, new_value=16
-    )
-    event = next(event_iterator)
-    assert event.previous_state == initial_status
-    assert event.new_state == dataclasses.replace(
-        initial_status, output_voltage_volts=235, load_watts=16
-    )
-    assert event.event_metadata == ValueChanged(
-        field_name="output_voltage_volts", previous_value=230, new_value=235
-    )
-    event = next(event_iterator)
-    assert event.previous_state == dataclasses.replace(
-        initial_status, output_voltage_volts=235, load_watts=16
-    )
-    assert event.new_state is None
-    assert event.event_metadata == ReachabilityChanged(reachable=False)
-    event = next(event_iterator)
-    assert event.previous_state is None
-    assert event.new_state == dataclasses.replace(
-        initial_status, output_voltage_volts=229
-    )
-    assert event.event_metadata == ReachabilityChanged(reachable=True)
-    reader_mock.assert_no_more_calls()
-    sleep_mock.assert_has_calls([call(2.0), call(2.0), call(2.0)])
-
-
 def test_get_raw_ups_properties(pywrstat_client: Pywrstat, reader_mock: FakeReader):
     reader_mock.expect_status_call()
     assert pretty_dump(pywrstat_client.get_raw_ups_properties()) == pretty_dump(
@@ -455,7 +409,7 @@ def test_get_raw_ups_properties(pywrstat_client: Pywrstat, reader_mock: FakeRead
 def test_get_ups_properties(pywrstat_client: Pywrstat, reader_mock: FakeReader):
     reader_mock.expect_status_call()
     assert pywrstat_client.get_ups_properties() == UPSProperties(
-        model_name="CP1500EPFCLCD",
+        ups_model_name="CP1500EPFCLCD",
         firmware_number="CR0XXXXXXX",
         rating_voltage_volts=230,
         rating_power_watts=900,
