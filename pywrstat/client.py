@@ -401,7 +401,7 @@ class Pywrstat(object):
         return self.get_daemon_configuration().hibernate_enabled
 
     @hibernation_enabled.setter
-    def hibernation_enabled(self, enabled: bool):
+    def hibernation_enabled(self, enabled: bool) -> None:
         """Set up the hibernation (vs. system shutdown) enablement (as run by `pwrstat -hibernate [on/off]`).
         :param enabled: Specify whether to enable or disable hibernation (vs. system shutdown).
         """
@@ -415,14 +415,14 @@ class Pywrstat(object):
         return self.get_daemon_configuration().alarm_enabled
 
     @alarm_enabled.setter
-    def alarm_enabled(self, enabled: bool):
+    def alarm_enabled(self, enabled: bool) -> None:
         """Set the UPS alarm enablement (as run by `pwrstat -alarm [on/off]`).
         :param enabled: Specify whether to enable or disable the UPS alarm.
         :raises: SetupFailed: If alarm enablement could not be setup.
         """
         self._check_setup(self._reader.read(["-alarm", _on_off(enabled)]))
 
-    def mute(self):
+    def mute(self) -> None:
         """Setup temporally mute alarm when alarm is on enable state (as run by `pwrstat -mute`).
         :raises: Unreachable: If the UPS is not reachable.
         :raises: SetupFailed: If alarm enablement could not be muted.
@@ -439,7 +439,7 @@ class Pywrstat(object):
         cmd: Optional[Union[str, Path]] = None,
         duration: Optional[timedelta] = None,
         shutdown: Optional[bool] = None,
-    ):
+    ) -> None:
         args = [action]
         if delay is not None:
             args += ["-delay", str(int(delay.total_seconds()))]

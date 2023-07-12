@@ -3,10 +3,10 @@ from datetime import timedelta
 from functools import wraps
 from http import HTTPStatus
 from pathlib import Path
-from typing import Literal
+from typing import Literal, Optional, cast
 
 import jwt
-from flask import Flask, abort, request
+from flask import Flask, Response, abort, request
 
 from pywrstat.client import Pywrstat
 from pywrstat.reader import Reader
@@ -17,9 +17,9 @@ app = Flask(__name__)
 
 class ServerConfig(BaseModel):
     secret_key: str
-    jwt_secret_key: str | None
+    jwt_secret_key: Optional[str]
     sudo_pwrstat: bool
-    pwrstat_path: Path | None
+    pwrstat_path: Optional[Path]
 
     @staticmethod
     def from_env() -> "ServerConfig":
@@ -37,7 +37,7 @@ class JwtPayload(BaseModel):
 
 
 def get_server_config() -> ServerConfig:
-    return app.config["server_config"]
+    return cast(ServerConfig, app.config["server_config"])
 
 
 def pydantic_json_response(data: BaseModel, status: int = 200):
@@ -62,7 +62,7 @@ def require_jwt(func):
             try:
                 _, jwt_token = request.headers["Authorization"].split(" ", maxsplit=1)
                 JwtPayload.model_validate(
-                    jwt.decode(jwt_token, jwt_secret_key, "HS256")
+                    jwt.decode(jwt_token, jwt_secret_key, algorithms=["HS256"])
                 )
             except Exception:
                 return abort(HTTPStatus.UNAUTHORIZED)
@@ -79,7 +79,7 @@ def get_ups_status():
 
 @app.route("/pywrstat/ups/status/monitor")
 @require_jwt
-def monitor_ups_status():
+def monitor_ups_status() -> Response:
     def monitor(poll_every: timedelta):
         for event in get_pywrstat_client().monitor_ups_status(poll_every):
             yield f"data: {event.model_dump_json()}\n\n"
@@ -93,12 +93,12 @@ def monitor_ups_status():
 
 
 @app.route("/pywrstat/ups/properties")
-def get_ups_properties():
+def get_ups_properties() -> Response:
     return pydantic_json_response(get_pywrstat_client().get_ups_properties())
 
 
 @app.route("/pywrstat/daemon/configuration")
-def get_daemon_configuration():
+def get_daemon_configuration() -> Response:
     return pydantic_json_response(get_pywrstat_client().get_daemon_configuration())
 
 
@@ -109,7 +109,7 @@ def create_app():
     return app
 
 
-def main():
+def main() -> None:
     create_app().run()
 
 

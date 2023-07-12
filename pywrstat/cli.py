@@ -1,4 +1,3 @@
-import os
 import pwd
 import secrets
 import subprocess
