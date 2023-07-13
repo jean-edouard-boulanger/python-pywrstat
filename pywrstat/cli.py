@@ -31,7 +31,7 @@ After=network.target
 type=Simple
 User={username}
 EnvironmentFile={env_file_path}
-ExecStart={python_executable_path} -m gunicorn -w 2 -b {host}:{port} 'pywrstat.web:create_app()'
+ExecStart={python_executable_path} -m gunicorn -w 2 -b {host}:{port} {gunicorn_extra_args} 'pywrstat.web:create_app()'
 
 [Install]
 WantedBy=multi-user.target
@@ -60,6 +60,14 @@ def parse_bind_host_port(bind_expr: str) -> tuple[str, int]:
     return host, int(raw_port)
 
 
+def get_server_jwt_key() -> str | None:
+    try:
+        conf = dotenv_values(PYWRSTAT_WEB_SERVICE_ENV_FILE_PATH)
+        return conf["PYWRSTAT_WEB_JWT_SECRET_KEY"]
+    except Exception:
+        return None
+
+
 def print_pydantic_json(data: BaseModel):
     print(data.model_dump_json(indent=2))
 
@@ -76,12 +84,15 @@ def web_systemctl_install_mode(args: Namespace):
         dedent(
             f"""\
     PYWRSTAT_WEB_SECRET_KEY="{secrets.token_hex(128)}"
-    PYWRSTAT_WEB_JWT_SECRET_KEY="{secrets.token_hex(128)}"
+    PYWRSTAT_WEB_JWT_SECRET_KEY="{get_server_jwt_key() or secrets.token_hex(128)}"
     PYWRSTAT_PWRSTAT_EXECUTABLE_PATH="{args.pwrstat_path}"
     PYWRSTAT_RUN_PWRSTAT_WITH_SUDO={int(args.sudo_pwrstat)}
     """
         )
     )
+    gunicorn_extra_args = None
+    if args.certfile and args.keyfile:
+        gunicorn_extra_args = f"--certfile={args.certfile} --keyfile={args.keyfile}"
     service_already_exists = SYSTEMD_WEB_SERVICE_FILE_PATH.exists()
     service_host, service_port = args.bind
     SYSTEMD_WEB_SERVICE_FILE_PATH.write_text(
@@ -91,6 +102,7 @@ def web_systemctl_install_mode(args: Namespace):
             username=username,
             host=service_host,
             port=service_port,
+            gunicorn_extra_args=gunicorn_extra_args or ""
         )
     )
     if args.edit_sudoers:
@@ -141,7 +153,20 @@ def create_argument_parser():
         help=f"Path to pwrstat executable (default: {DEFAULT_PWRSTAT_PATH})",
     )
     web_systemctl_install_parser.add_argument(
+        "--certfile",
+        type=Path,
+        default=None,
+        help="Server certificate file (optional)"
+    )
+    web_systemctl_install_parser.add_argument(
+        "--keyfile",
+        type=Path,
+        default=None,
+        help="Server private key file (optional)"
+    )
+    web_systemctl_install_parser.add_argument(
         "--no-sudo-pwrstat",
+        type=Path,
         default=True,
         dest="sudo_pwrstat",
         help="Don't run pwrstat using sudo",
