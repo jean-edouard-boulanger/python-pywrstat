@@ -102,7 +102,7 @@ def web_systemctl_install_mode(args: Namespace):
             username=username,
             host=service_host,
             port=service_port,
-            gunicorn_extra_args=gunicorn_extra_args or ""
+            gunicorn_extra_args=gunicorn_extra_args or "",
         )
     )
     if args.edit_sudoers:
@@ -113,7 +113,7 @@ def web_systemctl_install_mode(args: Namespace):
             print(f"Allowing user '{username}' to run pwrstat as 'root' (via sudoers)")
             sudoers_file_path.write_text(f"{sudoers}\n{sudoers_entry}\n")
     if service_already_exists:
-        sh(f"systemctl daemon-reload")
+        sh("systemctl daemon-reload")
     if args.enable_service:
         sh(f"systemctl enable {PYWRSTAT_WEB_SERVICE_SYSTEMD_SERVICE_NAME}")
     if args.start_service:
@@ -153,16 +153,10 @@ def create_argument_parser():
         help=f"Path to pwrstat executable (default: {DEFAULT_PWRSTAT_PATH})",
     )
     web_systemctl_install_parser.add_argument(
-        "--certfile",
-        type=Path,
-        default=None,
-        help="Server certificate file (optional)"
+        "--certfile", type=Path, default=None, help="Server certificate file (optional)"
     )
     web_systemctl_install_parser.add_argument(
-        "--keyfile",
-        type=Path,
-        default=None,
-        help="Server private key file (optional)"
+        "--keyfile", type=Path, default=None, help="Server private key file (optional)"
     )
     web_systemctl_install_parser.add_argument(
         "--no-sudo-pwrstat",
