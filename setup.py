@@ -21,7 +21,7 @@ setuptools.setup(
     author_email="jean.edouard.boulanger@gmail.com",
     license="MIT",
     packages=["pywrstat"],
-    python_requires=">=3.7",
+    python_requires=">=3.9",
     classifiers=[
         "Development Status :: 3 - Alpha",
         "Intended Audience :: System Administrators",
@@ -29,13 +29,17 @@ setuptools.setup(
         "Intended Audience :: Information Technology",
         "License :: OSI Approved :: MIT License",
         "Operating System :: POSIX :: Linux",
-        "Programming Language :: Python :: 3.7",
-        "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
         "Topic :: System :: Power (UPS)",
     ],
     install_requires=[
         "python-dateutil>=2.8.2,<3",
+        "pydantic>=2.0.2,<3",
+        "Flask>=2.3.2,<3",
+        "gunicorn>=20.1.0,<21",
+        "PyJWT>=2.7.0,<3",
+        "python-dotenv>=1.0.0,<2",
     ],
 )

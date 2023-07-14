@@ -1,4 +1,4 @@
-import dataclasses
+import json
 import re
 import time
 from collections import defaultdict
@@ -8,21 +8,21 @@ from typing import Dict, Generator, Optional, Union
 
 from dateutil.parser import parse as parse_time
 
-from pywrstat.dto import (
+from pywrstat.errors import CommandFailed, NotReady, SetupFailed, Timeout, Unreachable
+from pywrstat.reader import Reader, ReaderBase
+from pywrstat.schema import (
     DaemonConfiguration,
-    Event,
+    Events,
     LowBatteryAction,
     PowerEvent,
     PowerFailureAction,
-    ReachabilityChanged,
+    ReachabilityChangedEvent,
     TestResult,
     TestStatus,
     UPSProperties,
     UPSStatus,
-    ValueChanged,
+    ValueChangedEvent,
 )
-from pywrstat.errors import CommandFailed, NotReady, SetupFailed, Timeout, Unreachable
-from pywrstat.reader import Reader, ReaderBase
 
 _PywrstatSectionType = str
 _PywrstatPropertyType = str
@@ -253,7 +253,7 @@ class Pywrstat(object):
 
     def monitor_ups_status(
         self, poll_every: Optional[timedelta] = None
-    ) -> Generator[Event, None, None]:
+    ) -> Generator[Events, None, None]:
         """Monitor the UPS status, sends events whenever the status changes.
 
         Possible events are:
@@ -272,33 +272,42 @@ class Pywrstat(object):
             try:
                 current_state = self.get_ups_status()
                 if previously_reachable is False:
-                    yield Event(
-                        event_metadata=ReachabilityChanged(reachable=True),
+                    yield Events(
+                        events=[ReachabilityChangedEvent(reachable=True)],
                         new_state=current_state,
                         previous_state=previous_state,
                     )
                 if previous_state:
-                    previous_state_serialized = dataclasses.asdict(previous_state)
-                    current_state_serialized = dataclasses.asdict(current_state)
+                    previous_state_serialized = json.loads(
+                        previous_state.model_dump_json()
+                    )
+                    current_state_serialized = json.loads(
+                        current_state.model_dump_json()
+                    )
+                    events = []
                     for field in sorted(previous_state_serialized.keys()):
                         previous_value = previous_state_serialized[field]
                         current_value = current_state_serialized[field]
                         if current_value != previous_value:
-                            yield Event(
-                                event_metadata=ValueChanged(
+                            events.append(
+                                ValueChangedEvent(
                                     field_name=field,
                                     new_value=current_value,
                                     previous_value=previous_value,
-                                ),
-                                new_state=current_state,
-                                previous_state=previous_state,
+                                )
                             )
+                    if events:
+                        yield Events(
+                            events=events,
+                            previous_state=previous_state,
+                            new_state=current_state,
+                        )
                 previous_state = current_state
                 previously_reachable = True
             except Unreachable:
                 if previously_reachable is True:
-                    yield Event(
-                        event_metadata=ReachabilityChanged(reachable=False),
+                    yield Events(
+                        events=[ReachabilityChangedEvent(reachable=False)],
                         new_state=None,
                         previous_state=previous_state,
                     )
@@ -324,7 +333,7 @@ class Pywrstat(object):
         """
         data = self.get_raw_ups_properties(check_reachable=True)
         return UPSProperties(
-            model_name=data["Model Name"],
+            ups_model_name=data["Model Name"],
             firmware_number=data["Firmware Number"],
             rating_voltage_volts=float(data["Rating Voltage"].split()[0]),
             rating_power_watts=float(data["Rating Power"].split()[0]),
@@ -392,7 +401,7 @@ class Pywrstat(object):
         return self.get_daemon_configuration().hibernate_enabled
 
     @hibernation_enabled.setter
-    def hibernation_enabled(self, enabled: bool):
+    def hibernation_enabled(self, enabled: bool) -> None:
         """Set up the hibernation (vs. system shutdown) enablement (as run by `pwrstat -hibernate [on/off]`).
         :param enabled: Specify whether to enable or disable hibernation (vs. system shutdown).
         """
@@ -406,14 +415,14 @@ class Pywrstat(object):
         return self.get_daemon_configuration().alarm_enabled
 
     @alarm_enabled.setter
-    def alarm_enabled(self, enabled: bool):
+    def alarm_enabled(self, enabled: bool) -> None:
         """Set the UPS alarm enablement (as run by `pwrstat -alarm [on/off]`).
         :param enabled: Specify whether to enable or disable the UPS alarm.
         :raises: SetupFailed: If alarm enablement could not be setup.
         """
         self._check_setup(self._reader.read(["-alarm", _on_off(enabled)]))
 
-    def mute(self):
+    def mute(self) -> None:
         """Setup temporally mute alarm when alarm is on enable state (as run by `pwrstat -mute`).
         :raises: Unreachable: If the UPS is not reachable.
         :raises: SetupFailed: If alarm enablement could not be muted.
@@ -430,7 +439,7 @@ class Pywrstat(object):
         cmd: Optional[Union[str, Path]] = None,
         duration: Optional[timedelta] = None,
         shutdown: Optional[bool] = None,
-    ):
+    ) -> None:
         args = [action]
         if delay is not None:
             args += ["-delay", str(int(delay.total_seconds()))]
