@@ -127,6 +127,16 @@ def test_parse_test_result(raw_test_result: str, expected_test_result: TestResul
             ),
         ),
         (
+            "Blackout at 2023/07/14 18:12:26 for 1 min.",
+            PowerEvent(
+                event_type="Blackout",
+                event_time=datetime(
+                    year=2023, month=7, day=14, hour=18, minute=12, second=26
+                ),
+                duration=timedelta(seconds=60)
+            )
+        ),
+        (
             "Over Voltage at 2022/02/10 11:09:32 for 642 sec.",
             PowerEvent(
                 event_type="Over Voltage",

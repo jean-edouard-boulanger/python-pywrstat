@@ -80,14 +80,16 @@ def _parse_test_result(raw_test_result: str) -> Optional[TestResult]:
 
 def _parse_power_event(raw_power_event: str) -> Optional[PowerEvent]:
     match = re.search(
-        r"^([\w\s]+)\s+at\s+(\d{4}/\d{2}/\d{2}\s+\d{2}:\d{2}:\d{2})\s+for\s+(\d+) sec\.$",
+        r"^([\w\s]+)\s+at\s+(\d{4}/\d{2}/\d{2}\s+\d{2}:\d{2}:\d{2})\s+for\s+(\d+) (sec|min)\.$",
         raw_power_event,
     )
     if match:
+        unit = match.group(4)
+        multiplier = 1 if unit == "sec" else 60
         return PowerEvent(
             event_type=match.group(1),
             event_time=parse_time(match.group(2)),
-            duration=timedelta(seconds=int(match.group(3))),
+            duration=timedelta(seconds=(int(match.group(3)) * multiplier)),
         )
     return None
 

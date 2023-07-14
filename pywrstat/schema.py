@@ -3,12 +3,11 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Literal, Optional, Union
 
-from pydantic import BaseModel as _BaseModel
+from pydantic import BaseModel as _BaseModel, ConfigDict
 
 
 class BaseModel(_BaseModel):
-    class Config:
-        frozen = True
+    model_config = ConfigDict(frozen=True)
 
 
 class PowerEvent(BaseModel):
