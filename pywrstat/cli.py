@@ -105,7 +105,7 @@ def web_systemctl_install_mode(args: Namespace):
             gunicorn_extra_args=gunicorn_extra_args or "",
         )
     )
-    if args.edit_sudoers:
+    if args.edit_sudoers and args.user != "root":
         sudoers_file_path = Path("/etc/sudoers")
         sudoers_entry = f"{username} ALL=(root) NOPASSWD: /usr/sbin/pwrstat *"
         sudoers = sudoers_file_path.read_text().strip()
