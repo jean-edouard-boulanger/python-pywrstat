@@ -133,8 +133,8 @@ def test_parse_test_result(raw_test_result: str, expected_test_result: TestResul
                 event_time=datetime(
                     year=2023, month=7, day=14, hour=18, minute=12, second=26
                 ),
-                duration=timedelta(seconds=60)
-            )
+                duration=timedelta(seconds=60),
+            ),
         ),
         (
             "Over Voltage at 2022/02/10 11:09:32 for 642 sec.",

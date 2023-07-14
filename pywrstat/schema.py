@@ -3,7 +3,8 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Literal, Optional, Union
 
-from pydantic import BaseModel as _BaseModel, ConfigDict
+from pydantic import BaseModel as _BaseModel
+from pydantic import ConfigDict
 
 
 class BaseModel(_BaseModel):
